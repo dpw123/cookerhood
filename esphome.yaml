@@ -148,6 +148,7 @@ binary_sensor:
               button: light_button
 
   # On/Off button - GPIO14 (D5)
+  # Turns on at speed 1, or turns off if already running
   - platform: gpio
     pin:
       number: GPIO14
@@ -158,15 +159,19 @@ binary_sensor:
     filters:
       - delayed_on: 50ms
       - delayed_off: 50ms
-    on_click:
-      min_length: 250ms
-      then:
-        - homeassistant.event:
-            event: esphome.cookerhood_button
-            data:
-              button: onoff_button
+    on_press:
+      - if:
+          condition:
+            fan.is_on: cooker_hood_fan
+          then:
+            - fan.turn_off: cooker_hood_fan
+          else:
+            - fan.turn_on:
+                id: cooker_hood_fan
+                speed: 1
 
   # Speed button - GPIO13 (D7)
+  # Cycles speeds: 1 -> 2 -> 3 -> 4 -> off -> 1
   - platform: gpio
     pin:
       number: GPIO13
@@ -177,30 +182,41 @@ binary_sensor:
     filters:
       - delayed_on: 50ms
       - delayed_off: 50ms
-    on_click:
-      min_length: 250ms
-      then:
-        - homeassistant.event:
-            event: esphome.cookerhood_button
-            data:
-              button: speed_button
+    on_press:
+      - if:
+          condition:
+            fan.is_off: cooker_hood_fan
+          then:
+            - fan.turn_on:
+                id: cooker_hood_fan
+                speed: 1
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(cooker_hood_fan).speed >= 4;'
+                then:
+                  - fan.turn_off: cooker_hood_fan
+                else:
+                  - fan.turn_on:
+                      id: cooker_hood_fan
+                      speed: !lambda 'return id(cooker_hood_fan).speed + 1;'
 
   # Timer button - GPIO12 (D6)
-  - platform: gpio
-    pin:
-      number: GPIO12
-      mode: INPUT_PULLUP
-      inverted: true
-    name: "Timer Button"
-    id: timer_button
-    filters:
-      - delayed_on: 50ms
-      - delayed_off: 50ms
-    on_click:
-      min_length: 250ms
-      then:
-        - homeassistant.event:
-            event: esphome.cookerhood_button
-            data:
-              button: timer_button
+  # - platform: gpio
+  #   pin:
+  #     number: GPIO12
+  #     mode: INPUT_PULLUP
+  #     inverted: true
+  #   name: "Timer Button"
+  #   id: timer_button
+  #   filters:
+  #     - delayed_on: 50ms
+  #     - delayed_off: 50ms
+  #   on_click:
+  #     min_length: 250ms
+  #     then:
+  #       - homeassistant.event:
+  #           event: esphome.cookerhood_button
+  #           data:
+  #             button: timer_button
 
