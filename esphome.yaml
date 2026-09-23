@@ -5,9 +5,18 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  on_boot:
+    priority: 600
+    then:
+      - switch.turn_off: relay_1
+      - switch.turn_off: relay_2
+      - switch.turn_off: relay_3
+      - switch.turn_off: relay_4
+      - fan.turn_off: cooker_hood_fan
 
 esp8266:
   board: d1_mini
+  early_pin_init: false
 
 # Enable logging (9600 baud rate matching original hardware setup)
 logger:
@@ -38,7 +47,7 @@ captive_portal:
 switch:
   - platform: gpio
     pin:
-      number: GPIO2  # D4 - Relay 1
+      number:  GPIO5  # D1 - Relay 1
       inverted: true
     id: relay_1
     name: "Speed 1 Relay"
@@ -49,7 +58,7 @@ switch:
 
   - platform: gpio
     pin:
-      number: GPIO0  # D3 - Relay 2
+      number: GPIO4  # D2 - Relay 2
       inverted: true
     id: relay_2
     name: "Speed 2 Relay"
@@ -60,7 +69,7 @@ switch:
 
   - platform: gpio
     pin:
-      number: GPIO4  # D2 - Relay 3
+      number: GPIO0  # D3 - Relay 3
       inverted: true
     id: relay_3
     name: "Speed 3 Relay"
@@ -71,7 +80,7 @@ switch:
 
   - platform: gpio
     pin:
-      number: GPIO5  # D1 - Relay 4
+      number: GPIO2  # D4 - Relay 4
       inverted: true
     id: relay_4
     name: "Speed 4 Relay"
@@ -89,6 +98,7 @@ fan:
     name: "Fan"
     id: cooker_hood_fan
     speed_count: 4
+    restore_mode: ALWAYS_OFF
     on_turn_on:
       - lambda: |-
           int s = id(cooker_hood_fan).speed;
@@ -104,15 +114,11 @@ fan:
       - switch.turn_off: relay_4
     on_speed_set:
       - lambda: |-
-          if (x == 1) id(relay_1).turn_on();
-          else if (x == 2) id(relay_2).turn_on();
-          else if (x == 3) id(relay_3).turn_on();
-          else if (x == 4) id(relay_4).turn_on();
-          else {
-            id(relay_1).turn_off();
-            id(relay_2).turn_off();
-            id(relay_3).turn_off();
-            id(relay_4).turn_off();
+          if (id(cooker_hood_fan).state) {
+            if (x == 1) id(relay_1).turn_on();
+            else if (x == 2) id(relay_2).turn_on();
+            else if (x == 3) id(relay_3).turn_on();
+            else if (x == 4) id(relay_4).turn_on();
           }
 
 # ==============================================================================
