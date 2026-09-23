@@ -1,0 +1,196 @@
+substitutions:
+  name: "cookerhood"
+  friendly_name: "Cooker Hood"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp8266:
+  board: d1_mini
+
+# Enable logging (9600 baud rate matching original hardware setup)
+logger:
+  baud_rate: 9600
+
+# Home Assistant Native API
+api:
+
+# Over-The-Air updates
+ota:
+  platform: esphome
+
+# Wi-Fi configuration
+wifi:
+  ssid: "DeviceNet"
+  password: "HappyPuppy1105"
+
+  # Fallback AP in case Wi-Fi connection fails
+  ap:
+    ssid: "Cookerhood-Fallback"
+
+captive_portal:
+
+# ==============================================================================
+# RELAYS (Motor Speeds 1 to 4)
+# Active LOW outputs with hardware mutual interlocking and 100ms safety deadtime
+# ==============================================================================
+switch:
+  - platform: gpio
+    pin:
+      number: GPIO2  # D4 - Relay 1
+      inverted: true
+    id: relay_1
+    name: "Speed 1 Relay"
+    interlock: &speed_interlock [relay_1, relay_2, relay_3, relay_4]
+    interlock_wait_time: 100ms
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    pin:
+      number: GPIO0  # D3 - Relay 2
+      inverted: true
+    id: relay_2
+    name: "Speed 2 Relay"
+    interlock: *speed_interlock
+    interlock_wait_time: 100ms
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    pin:
+      number: GPIO4  # D2 - Relay 3
+      inverted: true
+    id: relay_3
+    name: "Speed 3 Relay"
+    interlock: *speed_interlock
+    interlock_wait_time: 100ms
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    pin:
+      number: GPIO5  # D1 - Relay 4
+      inverted: true
+    id: relay_4
+    name: "Speed 4 Relay"
+    interlock: *speed_interlock
+    interlock_wait_time: 100ms
+    restore_mode: ALWAYS_OFF
+
+# ==============================================================================
+# FAN COMPONENT (Exposed natively to Home Assistant)
+# Controls speeds 1 to 4 with off state
+# ==============================================================================
+fan:
+  - platform: template
+    name: "Fan"
+    id: cooker_hood_fan
+    speed_count: 4
+    turn_on_action:
+      - lambda: |-
+          int s = id(cooker_hood_fan).speed;
+          if (s <= 0) s = 1;
+          if (s == 1) id(relay_1).turn_on();
+          else if (s == 2) id(relay_2).turn_on();
+          else if (s == 3) id(relay_3).turn_on();
+          else if (s == 4) id(relay_4).turn_on();
+    turn_off_action:
+      - switch.turn_off: relay_1
+      - switch.turn_off: relay_2
+      - switch.turn_off: relay_3
+      - switch.turn_off: relay_4
+    speed_action:
+      - lambda: |-
+          if (speed == 1) id(relay_1).turn_on();
+          else if (speed == 2) id(relay_2).turn_on();
+          else if (speed == 3) id(relay_3).turn_on();
+          else if (speed == 4) id(relay_4).turn_on();
+          else {
+            id(relay_1).turn_off();
+            id(relay_2).turn_off();
+            id(relay_3).turn_off();
+            id(relay_4).turn_off();
+          }
+
+# ==============================================================================
+# BUTTONS / INPUT SENSORS
+# Matches original logic:
+# 1. Exposed as binary_sensors to Home Assistant.
+# 2. When pressed for >= 250ms and released, fires an event to Home Assistant.
+# ==============================================================================
+binary_sensor:
+  # Light button - GPIO16 (D0)
+  # Note: ESP8266 GPIO16 does not support internal pullup in hardware
+  - platform: gpio
+    pin:
+      number: GPIO16
+      inverted: true
+    name: "Light Button"
+    id: light_button
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_click:
+      min_length: 250ms
+      then:
+        - homeassistant.event:
+            event: esphome.cookerhood_button
+            data:
+              button: light_button
+
+  # On/Off button - GPIO14 (D5)
+  - platform: gpio
+    pin:
+      number: GPIO14
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "On-Off Button"
+    id: onoff_button
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_click:
+      min_length: 250ms
+      then:
+        - homeassistant.event:
+            event: esphome.cookerhood_button
+            data:
+              button: onoff_button
+
+  # Speed button - GPIO13 (D7)
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Speed Button"
+    id: speed_button
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_click:
+      min_length: 250ms
+      then:
+        - homeassistant.event:
+            event: esphome.cookerhood_button
+            data:
+              button: speed_button
+
+  # Timer button - GPIO12 (D6)
+  - platform: gpio
+    pin:
+      number: GPIO12
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Timer Button"
+    id: timer_button
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_click:
+      min_length: 250ms
+      then:
+        - homeassistant.event:
+            event: esphome.cookerhood_button
+            data:
+              button: timer_button
+
