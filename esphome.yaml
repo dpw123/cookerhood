@@ -85,7 +85,7 @@ fan:
     name: "Fan"
     id: cooker_hood_fan
     speed_count: 4
-    turn_on_action:
+    on_turn_on:
       - lambda: |-
           int s = id(cooker_hood_fan).speed;
           if (s <= 0) s = 1;
@@ -93,17 +93,17 @@ fan:
           else if (s == 2) id(relay_2).turn_on();
           else if (s == 3) id(relay_3).turn_on();
           else if (s == 4) id(relay_4).turn_on();
-    turn_off_action:
+    on_turn_off:
       - switch.turn_off: relay_1
       - switch.turn_off: relay_2
       - switch.turn_off: relay_3
       - switch.turn_off: relay_4
-    speed_action:
+    on_speed_set:
       - lambda: |-
-          if (speed == 1) id(relay_1).turn_on();
-          else if (speed == 2) id(relay_2).turn_on();
-          else if (speed == 3) id(relay_3).turn_on();
-          else if (speed == 4) id(relay_4).turn_on();
+          if (x == 1) id(relay_1).turn_on();
+          else if (x == 2) id(relay_2).turn_on();
+          else if (x == 3) id(relay_3).turn_on();
+          else if (x == 4) id(relay_4).turn_on();
           else {
             id(relay_1).turn_off();
             id(relay_2).turn_off();
